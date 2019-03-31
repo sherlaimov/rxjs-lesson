@@ -29,4 +29,7 @@ export interface IAppState extends IInfo {
   range: { min: number; max: number };
   results?: Array<ICharacter>;
   cache?: Array<ICharacter>;
+  statusMap: {
+    [key: string]: boolean;
+  };
 }

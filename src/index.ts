@@ -1,17 +1,30 @@
 import { from, fromEvent, Observable, of, merge } from 'rxjs';
-import { map, catchError, mergeMap } from 'rxjs/operators';
+import { map, catchError, mergeMap, filter } from 'rxjs/operators';
 
 import './main.scss';
 import { ICharacter, IInfo, IServerResp, IAppState } from './interfaces';
+
+const capitalize = (s: string | undefined) => {
+  if (typeof s !== 'string') return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
 
 const appState: IAppState = {
   step: 5,
   currPage: 1,
   range: { min: 1, max: 5 },
+  statusMap: {
+    all: true,
+    alive: false,
+    dead: false,
+    unknown: false,
+  },
 };
 
 const wrapper = document.querySelector('.wrapper') as HTMLDivElement;
 const inputElement: HTMLInputElement = document.querySelector('#refInput') as HTMLInputElement;
+const statusSelect = document.querySelector('#status') as HTMLSelectElement;
+const genderSelect = document.querySelector('#gender') as HTMLSelectElement;
 
 const createEl = (type: string, attr?: object, textNode?: string): HTMLElement => {
   const el = document.createElement(type);
@@ -117,31 +130,76 @@ const controls$ = fromEvent(controlsNav, 'click').pipe(
         .catch(err => console.log(err))
     )
   ),
+  filter(response => {
+    const { results } = response;
+    const status = Object.keys(appState.statusMap).find(key => appState.statusMap[key] === true);
+    if (status === 'all') {
+      return response;
+    } else {
+      response.results = results.filter(
+        (character: ICharacter) => character.status === capitalize(status)
+      );
+    }
+    return response;
+  }),
   catchError((err: Error, caught: any) => {
     return of(err);
   })
 );
 
+const status$ = fromEvent(statusSelect, 'change').pipe(
+  map((e: Event) => {
+    const v = (e.target as any).value;
+    return v.toLowerCase();
+  })
+);
+
+status$.subscribe(status => {
+  const { cache } = appState;
+  if (cache === undefined) return;
+  Object.keys(appState.statusMap).forEach(key => {
+    appState.statusMap[key] = false;
+    if (key === status) {
+      appState.statusMap[key] = true;
+    }
+  });
+
+  if (status !== 'all') {
+    appState.results = cache.filter(
+      (character: ICharacter) => character.status === capitalize(status)
+    );
+  } else {
+    appState.results = appState.cache;
+  }
+  createList();
+});
+
 const input$ = fromEvent(inputElement, 'input').pipe(
   map((e: Event) => {
     const searchVal = (e.target as any).value;
-    return searchVal;
+    return searchVal.trim();
   })
 );
 
 input$.subscribe((searchVal: string) => {
   const { cache } = appState;
-  if (cache !== undefined) {
-    if (searchVal !== '') {
-      const filtered: Array<ICharacter> = cache.filter(character =>
-        character.name.toLowerCase().includes(searchVal.toLowerCase())
-      );
-      appState.results = filtered;
-    } else {
-      appState.results = appState.cache;
-    }
-    createList();
+  if (cache === undefined || appState.results === undefined) return;
+
+  const status = Object.keys(appState.statusMap).find(key => appState.statusMap[key] === true);
+  if (status === 'all') {
+    appState.results = appState.cache;
+  } else {
+    appState.results = cache.filter(
+      (character: ICharacter) => character.status === capitalize(status)
+    );
   }
+
+  if (searchVal !== '' && appState.results !== undefined) {
+    appState.results = appState.results.filter(character =>
+      character.name.toLowerCase().includes(searchVal.toLowerCase())
+    );
+  }
+  createList();
 });
 
 merge(source$, controls$).subscribe((response: any) => {
