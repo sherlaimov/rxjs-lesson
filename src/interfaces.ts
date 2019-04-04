@@ -20,7 +20,7 @@ export interface IInfo {
 }
 export interface IServerResp {
   info: IInfo;
-  results: Array<ICharacter>;
+  results?: Array<ICharacter>;
 }
 
 export interface IAppState extends IInfo {
@@ -29,6 +29,7 @@ export interface IAppState extends IInfo {
   range: { min: number; max: number };
   results?: Array<ICharacter>;
   cache?: Array<ICharacter>;
+  searchVal: string;
   statusMap: {
     [key: string]: boolean;
   };

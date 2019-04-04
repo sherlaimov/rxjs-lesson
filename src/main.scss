@@ -9,6 +9,12 @@ body {
 ul {
   list-style: none;
   padding-left: 0;
+  li {
+    img {
+      width: 2em;
+      margin-left: 0.4em;
+    }
+  }
 }
 
 button {
